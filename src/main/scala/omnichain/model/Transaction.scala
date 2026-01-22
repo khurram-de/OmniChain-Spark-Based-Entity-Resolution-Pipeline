@@ -1,8 +1,10 @@
 package omnichain.model
 
-case class Transaction(
+final case class Transaction(
     txId: String,
-    name: String,
-    wallet: String,
-    amount: Double
+    name: String, // nameOrig
+    wallet: String, // proxy: nameOrig (source account)
+    amount: Double,
+    txType: String, // PaySim `type`
+    eventTime: Long // PaySim `step`
 )
