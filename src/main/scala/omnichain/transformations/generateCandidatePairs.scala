@@ -25,4 +25,25 @@ object generateCandidatePairs {
       }
 
   }
+
+  def unionAndDeduplicate(
+      ds1: Dataset[CandidatePairs],
+      ds2: Dataset[CandidatePairs]
+  ): Dataset[CandidatePairs] = {
+    /*
+     * Placeholder for union and deduplication logic of candidate pairs from different blocking strategies
+     */
+    import ds1.sparkSession.implicits._
+    ds1
+      .union(ds2)
+      .map { pair =>
+        val a = pair.left.txId
+        val b = pair.right.txId
+        val key = if (a <= b) s"$a|$b" else s"$b|$a"
+        (key, pair)
+      }
+      .dropDuplicates("_1")
+      .map(_._2)
+
+  }
 }

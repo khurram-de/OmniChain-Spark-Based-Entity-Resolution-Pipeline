@@ -43,4 +43,48 @@ object Blocking {
     ds.map { tx => (blockingKey(tx.name), tx) }
   }
 
+  def blockingWithExactNameKey(
+      ds: Dataset[Transaction]
+  ): Dataset[(String, Transaction)] = {
+    import ds.sparkSession.implicits._
+    ds.map(txn => (txn.name.trim.toLowerCase, txn))
+  }
+
+  def blockingWithAmountCentsKey(
+      ds: Dataset[Transaction]
+  ): Dataset[(String, Transaction)] = {
+    import ds.sparkSession.implicits._
+    ds.map { txn =>
+      val cents = math.round(txn.amount * 100.0)
+      // (s"amt:$cents", txn)
+      (s"amt:${cents}|type:${txn.txType}", txn)
+
+    }
+  }
+
+  def capBlocks(
+      blocked: Dataset[(String, Transaction)],
+      maxBlockSize: Long
+  ): Dataset[(String, Transaction)] = {
+    /*
+     * Placeholder for blocking cap logic to limit the number of transactions per block key
+     */
+    import blocked.sparkSession.implicits._
+
+    val blockSize = blocked
+      .groupByKey(_._1)
+      .count()
+      .toDF("blockKey", "blockSize")
+
+    val allowedBlockKeys = blockSize
+      .filter($"blockSize" <= maxBlockSize)
+      .select("blockKey")
+
+    blocked
+      .toDF("blockKey", "transaction")
+      .join(allowedBlockKeys.toDF("blockKey"), "blockKey", "inner")
+      .as[(String, Transaction)]
+
+  }
+
 }

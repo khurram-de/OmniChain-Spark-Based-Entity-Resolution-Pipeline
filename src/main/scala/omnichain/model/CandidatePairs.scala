@@ -11,3 +11,8 @@ case class CandidatePairs(
     right: Transaction,
     blockKey: String
 )
+
+final case class CandidatePairKeyed(
+    key: String,
+    candidatePair: CandidatePairs
+)

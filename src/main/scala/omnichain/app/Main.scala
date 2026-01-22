@@ -6,18 +6,24 @@ import org.apache.spark.sql.{SparkSession, Dataset}
 import omnichain.transformations.SampleData.sampleTransactions
 
 // Blocking logic to reduce O(n^2) comparisons
-import omnichain.transformations.Blocking.withBlockingKeys
+import omnichain.transformations.Blocking._
 
 // Candidate pair generation within blocks
-import omnichain.transformations.generateCandidatePairs.generateCandidatePairs
+import omnichain.transformations.generateCandidatePairs._
 
 // Similarity scoring logic (pure functions, Dataset-native)
 import omnichain.transformations.SimilarityScoring._
 
-import omnichain.transformations.Decisioning.decide
+import omnichain.transformations.Decisioning._
 
 // Final flattened decision output (Spark-friendly schema)
 import omnichain.model.{PairDecision, SimilarityScore}
+
+import omnichain.transformations.generateCandidatePairs.{
+  generateCandidatePairs,
+  unionAndDeduplicate
+}
+import javassist.tools.reflect.Sample
 
 object Main {
 
@@ -32,6 +38,10 @@ object Main {
       .builder()
       .appName("OmniChain")
       .master("local[*]")
+      .config("spark.driver.memory", "8g")
+      .config("spark.sql.shuffle.partitions", "64")
+      .config("spark.default.parallelism", "64")
+      .config("spark.driver.extraJavaOptions", "-XX:+UseG1GC")
       .getOrCreate()
 
     // Required for Dataset encoders
@@ -42,77 +52,55 @@ object Main {
     // ------------------------------------------------------------
     // Creates a Dataset[Transaction] with intentional identity gaps
     // (e.g. name variants, multiple wallets for same person)
+    // val smpDS = sampleTransactions(spark)
+    // println(s"Sampled transactions: ${smpDS.count()}")
+
     val smpDS = sampleTransactions(spark)
-    println(s"Sampled transactions: ${smpDS.count()}")
+    // Alternatively, load real data from CSV
+    //   omnichain.ingress.DataLoader
+    //     .loadPaySimDataTxns(spark, "src/main/scala/omnichain/data/PaySim.csv")
+    println(s"PaySim transactions: ${smpDS.count()}")
 
     // ------------------------------------------------------------
     // 2. Blocking
     // ------------------------------------------------------------
-    // Add blocking keys to reduce candidate comparisons.
-    // This avoids O(n^2) explosion in entity resolution.
-    val blocked = withBlockingKeys(smpDS)
+    val backedByExactNameDS =
+      blockingWithExactNameKey(smpDS)
+    val backedByAmountCentsDS =
+      capBlocks(blockingWithAmountCentsKey(smpDS), 100)
 
     // ------------------------------------------------------------
-    // 3. Candidate Pair Generation
+    // 3. Generate Candidate Pairs
     // ------------------------------------------------------------
-    // Generate candidate pairs only within the same block.
-    // Cached because we both count and later transform it.
-    val candidatePairs = generateCandidatePairs(blocked).cache()
-    println(s"Generated candidate pairs: ${candidatePairs.count()}")
+    val candidatePairsByNameDS =
+      generateCandidatePairs(backedByExactNameDS)
+    println(
+      s"Candidate pairs by Name Blocking: ${candidatePairsByNameDS.count()}"
+    )
+    val candidatePairsByAmountDS =
+      generateCandidatePairs(backedByAmountCentsDS)
+    println(
+      s"Candidate pairs by Amount Blocking: ${candidatePairsByAmountDS.count()}"
+    )
+
+    println(
+      s"Union raw pairs: ${candidatePairsByNameDS.union(candidatePairsByAmountDS).count()}"
+    )
 
     // ------------------------------------------------------------
-    // 4. Similarity Scoring
+    // 4. Union and Deduplicate Candidate Pairs from different blocking strategies
     // ------------------------------------------------------------
-    // Convert each candidate pair into a similarity score.
-    // Uses pure Scala functions (no UDFs).
-    val scored: Dataset[SimilarityScore] =
-      candidatePairs.map(toSimilarityScore).cache()
-    println(s"Scored candidate pairs: ${scored.count()}")
+    val allCandidatePairsDS =
+      unionAndDeduplicate(
+        candidatePairsByNameDS,
+        candidatePairsByAmountDS
+      )
 
+    println(s"Total candidate pairs: ${allCandidatePairsDS.count()}")
     // ------------------------------------------------------------
-    // 5. Load Decision Policy (Driver-only)
+    // 5. Similarity Scoring
     // ------------------------------------------------------------
-    // Policy is loaded once on the driver, validated, and then
-    // safely captured in Spark closures.
-    val policy = omnichain.config.PolicyLoader.load()
-    println(s"Loaded decision policy: $policy")
 
-    // ------------------------------------------------------------
-    // 6. Decisioning
-    // ------------------------------------------------------------
-    // Apply decision logic to each scored pair.
-    //
-    // IMPORTANT DESIGN CHOICE:
-    // - Internally we use rich ADTs (DecisionReason, etc.)
-    // - At the Spark boundary we emit only primitive, encodable types
-    //   (String, Seq[String]) for schema stability and explainability.
-    val matchDecisions: Dataset[PairDecision] =
-      scored
-        .map { score =>
-          val md = decide(score, policy)
-          PairDecision(
-            score.leftTxId,
-            score.rightTxId,
-            score.blockKey,
-            md.decision, // "MATCHED" | "NOT_MATCHED"
-            md.reasons, // Seq[String]
-            md.policyVersion
-          )
-        }
-        .cache()
-
-    println(s"Generated match decisions: ${matchDecisions.count()}")
-
-    // ------------------------------------------------------------
-    // 7. Output (Demo)
-    // ------------------------------------------------------------
-    // Show final resolved decisions.
-    // In a real pipeline this would be written to storage.
-    matchDecisions.show(50, truncate = false)
-
-    // ------------------------------------------------------------
-    // Shutdown
-    // ------------------------------------------------------------
     spark.stop()
   }
 }
