@@ -1,30 +1,17 @@
 package omnichain.app
 
 import org.apache.spark.sql.{SparkSession, Dataset}
-
-// Sample data generator with intentional identity gaps
 import omnichain.transformations.SampleData.sampleTransactions
-
-// Blocking logic to reduce O(n^2) comparisons
 import omnichain.transformations.Blocking._
-
-// Candidate pair generation within blocks
-import omnichain.transformations.generateCandidatePairs._
-
-// Similarity scoring logic (pure functions, Dataset-native)
 import omnichain.transformations.SimilarityScoring._
-
 import omnichain.transformations.Decisioning._
-
-// Final flattened decision output (Spark-friendly schema)
 import omnichain.model.{PairDecision, SimilarityScore}
-
 import omnichain.transformations.generateCandidatePairs.{
   generateCandidatePairs,
   unionAndDeduplicate
 }
-import javassist.tools.reflect.Sample
-
+import org.apache.spark.storage.StorageLevel
+import omnichain.metrics.PipelineMetrics.{topBlockSizes, blockCapHitRate}
 object Main {
 
   def main(args: Array[String]): Unit = {
@@ -32,74 +19,108 @@ object Main {
     // ------------------------------------------------------------
     // Spark Session
     // ------------------------------------------------------------
-    // For local development we explicitly set master.
-    // In real deployments, this is controlled by spark-submit.
     val spark = SparkSession
       .builder()
       .appName("OmniChain")
       .master("local[*]")
-      .config("spark.driver.memory", "8g")
-      .config("spark.sql.shuffle.partitions", "64")
-      .config("spark.default.parallelism", "64")
-      .config("spark.driver.extraJavaOptions", "-XX:+UseG1GC")
       .getOrCreate()
 
-    // Required for Dataset encoders
-    import spark.implicits._
+    // ------------------------------------------------------------
+    // Controls (keep in one place)
+    // ------------------------------------------------------------
+    val amountBlockCap = 10
+    val topNBlocksToPrint = 10
+    val SL = StorageLevel.MEMORY_AND_DISK
 
     // ------------------------------------------------------------
-    // 1. Generate Sample Transactions
+    // 1. Load / Generate Transactions
     // ------------------------------------------------------------
-    // Creates a Dataset[Transaction] with intentional identity gaps
-    // (e.g. name variants, multiple wallets for same person)
-    // val smpDS = sampleTransactions(spark)
-    // println(s"Sampled transactions: ${smpDS.count()}")
+    val smpDS =
+      sampleTransactions(spark)
+        .persist(SL)
 
-    val smpDS = sampleTransactions(spark)
-    // Alternatively, load real data from CSV
-    //   omnichain.ingress.DataLoader
-    //     .loadPaySimDataTxns(spark, "src/main/scala/omnichain/data/PaySim.csv")
-    println(s"PaySim transactions: ${smpDS.count()}")
+    println(s"Sampled transactions: ${smpDS.count()}")
 
     // ------------------------------------------------------------
-    // 2. Blocking
+    // 2. Blocking + Block Metrics
     // ------------------------------------------------------------
-    val backedByExactNameDS =
+    val blockedByExactNameDS =
       blockingWithExactNameKey(smpDS)
-    val backedByAmountCentsDS =
-      capBlocks(blockingWithAmountCentsKey(smpDS), 100)
+        .persist(SL)
+
+    topBlockSizes(
+      "Exact Name Blocking",
+      blockedByExactNameDS,
+      topNBlocksToPrint
+    ).show(false)
+
+    val blockedByExactAmountDS =
+      blockingWithAmountCentsKey(smpDS)
+        .persist(SL)
+
+    val blockedByAmountCentsDS =
+      capBlocks(blockedByExactAmountDS, amountBlockCap)
+        .persist(SL)
+
+    // After both blocking passes are materialized, we no longer need the raw input cached
+    smpDS.unpersist()
+
+    topBlockSizes(
+      "Amount Cents Blocking",
+      blockedByAmountCentsDS,
+      topNBlocksToPrint
+    ).show(false)
+
+    blockCapHitRate(
+      "Capping Hit Rate",
+      blockedByExactAmountDS,
+      blockedByAmountCentsDS
+    )
+
+    // No longer needed after cap metrics
+    blockedByExactAmountDS.unpersist()
 
     // ------------------------------------------------------------
-    // 3. Generate Candidate Pairs
+    // 3. Candidate Pair Generation
     // ------------------------------------------------------------
     val candidatePairsByNameDS =
-      generateCandidatePairs(backedByExactNameDS)
+      generateCandidatePairs(blockedByExactNameDS)
+        .persist(SL)
+
     println(
       s"Candidate pairs by Name Blocking: ${candidatePairsByNameDS.count()}"
     )
+
+    // Safe to drop after candidate generation
+    blockedByExactNameDS.unpersist()
+
     val candidatePairsByAmountDS =
-      generateCandidatePairs(backedByAmountCentsDS)
+      generateCandidatePairs(blockedByAmountCentsDS)
+        .persist(SL)
+
     println(
       s"Candidate pairs by Amount Blocking: ${candidatePairsByAmountDS.count()}"
     )
 
-    println(
-      s"Union raw pairs: ${candidatePairsByNameDS.union(candidatePairsByAmountDS).count()}"
-    )
+    // Safe to drop after candidate generation
+    blockedByAmountCentsDS.unpersist()
 
     // ------------------------------------------------------------
-    // 4. Union and Deduplicate Candidate Pairs from different blocking strategies
+    // 4. Union + Deduplicate
     // ------------------------------------------------------------
     val allCandidatePairsDS =
-      unionAndDeduplicate(
-        candidatePairsByNameDS,
-        candidatePairsByAmountDS
-      )
+      unionAndDeduplicate(candidatePairsByNameDS, candidatePairsByAmountDS)
+        .persist(SL)
+
+    candidatePairsByNameDS.unpersist()
+    candidatePairsByAmountDS.unpersist()
 
     println(s"Total candidate pairs: ${allCandidatePairsDS.count()}")
+
     // ------------------------------------------------------------
-    // 5. Similarity Scoring
+    // 5. Similarity Scoring (next step)
     // ------------------------------------------------------------
+    allCandidatePairsDS.unpersist()
 
     spark.stop()
   }
