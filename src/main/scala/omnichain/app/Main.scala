@@ -3,7 +3,7 @@ package omnichain.app
 import org.apache.spark.sql.{SparkSession, Dataset}
 import omnichain.transformations.SampleData.sampleTransactions
 import omnichain.transformations.Blocking._
-import omnichain.transformations.SimilarityScoring._
+import omnichain.transformations.SimilarityScoring.{toSimilarityScore}
 import omnichain.transformations.Decisioning._
 import omnichain.model.{PairDecision, SimilarityScore}
 import omnichain.transformations.generateCandidatePairs.{
@@ -12,6 +12,10 @@ import omnichain.transformations.generateCandidatePairs.{
 }
 import org.apache.spark.storage.StorageLevel
 import omnichain.metrics.PipelineMetrics.{topBlockSizes, blockCapHitRate}
+import org.apache.spark.sql.functions.monotonically_increasing_id
+import omnichain.ingress.PaySimRaw
+import omnichain.model.Transaction
+
 object Main {
 
   def main(args: Array[String]): Unit = {
@@ -25,6 +29,8 @@ object Main {
       .master("local[*]")
       .getOrCreate()
 
+    import spark.implicits._
+
     // ------------------------------------------------------------
     // Controls (keep in one place)
     // ------------------------------------------------------------
@@ -35,9 +41,36 @@ object Main {
     // ------------------------------------------------------------
     // 1. Load / Generate Transactions
     // ------------------------------------------------------------
+
+    val schema = PaySimRaw.getSchema()
+
     val smpDS =
-      sampleTransactions(spark)
-        .persist(SL)
+      spark.read
+        .option("header", "true")
+        .schema(schema)
+        .csv("src/main/scala/omnichain/data/PaySim.csv")
+        .withColumn("txId", monotonically_increasing_id().cast("string"))
+        .select(
+          $"txId",
+          $"nameOrig",
+          $"amount",
+          $"type",
+          $"step"
+        )
+        .as[(String, String, Double, String, Long)]
+        .map { case (txId, nameOrig, amount, txType, step) =>
+          Transaction(
+            txId = txId,
+            name = nameOrig,
+            wallet = nameOrig, // proxy for PaySim (source account)
+            amount = amount,
+            txType = txType,
+            eventTime = step
+          )
+        }
+    // val smpDS =
+    //   sampleTransactions(spark)
+    //     .persist(SL)
 
     println(s"Sampled transactions: ${smpDS.count()}")
 
@@ -120,7 +153,34 @@ object Main {
     // ------------------------------------------------------------
     // 5. Similarity Scoring (next step)
     // ------------------------------------------------------------
+
+    val similarityScoresDS =
+      allCandidatePairsDS
+        .map(toSimilarityScore)
+        .persist(SL)
+    similarityScoresDS.show(false)
     allCandidatePairsDS.unpersist()
+
+    val policy = omnichain.config.PolicyLoader.load()
+    println(s"Loaded decision policy: $policy")
+
+    val decisionsDS =
+      similarityScoresDS
+        .map { score =>
+          val decision = decide(score, policy)
+          PairDecision(
+            score.leftTxId,
+            score.rightTxId,
+            score,
+            decision.reasons,
+            decision.decision,
+            decision.policyVersion
+          )
+        }
+        .persist(SL)
+    similarityScoresDS.unpersist()
+    decisionsDS.show(false)
+    decisionsDS.unpersist()
 
     spark.stop()
   }

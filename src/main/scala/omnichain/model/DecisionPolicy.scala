@@ -1,7 +1,11 @@
 package omnichain.model
 
-case class DecisionPolicy(
+final case class DecisionPolicy(
     policyVersion: String,
     nameSimilarityThreshold: Double,
-    amountRelativeTolerance: Double
+    amountRelativeTolerance: Double,
+    walletMatchEnabled: Boolean,
+    requireTypeMatch: Boolean,
+    maxStepDistance: Long,
+    evidenceMode: EvidenceMode
 )

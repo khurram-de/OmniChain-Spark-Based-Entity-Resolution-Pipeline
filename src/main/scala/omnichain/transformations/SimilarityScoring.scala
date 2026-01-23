@@ -4,6 +4,10 @@ import omnichain.transformations.Blocking.normalizeName
 import omnichain.model._
 
 object SimilarityScoring {
+
+  private def normalizeType(t: String): String =
+    t.trim.toUpperCase
+
   def nameSimilarityScore(
       leftName: String,
       rightName: String
@@ -87,13 +91,19 @@ object SimilarityScoring {
      * - Computes name similarity, wallet exact match, and amount difference
      * - Returns a SimilarityScore instance encapsulating these metrics
      */
+    val typeExactMatch =
+      normalizeType(pair.left.txType) == normalizeType(pair.right.txType)
+    val timeDistance =
+      math.abs(pair.left.eventTime - pair.right.eventTime) // in seconds
     SimilarityScore(
       pair.left.txId,
       pair.right.txId,
       nameSimilarityScore(pair.left.name, pair.right.name),
       walletExactMatch(pair.left.wallet, pair.right.wallet),
       amountRelativeDelta(pair.left.amount, pair.right.amount),
-      pair.blockKey
+      pair.blockKey,
+      typeExactMatch, // type exact match
+      timeDistance // step distance (PaySim step units)
     )
   }
 }

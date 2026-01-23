@@ -32,6 +32,19 @@ object DecisionReason {
 
   case object InsufficientEvidence extends DecisionReason
   case object ConflictingEvidence extends DecisionReason
+  final case object TypeMatched extends DecisionReason
+  final case object TypeMismatched extends DecisionReason
+
+  final case class StepWithinWindow(
+      distance: Long,
+      maxAllowed: Long
+  ) extends DecisionReason
+
+  final case class StepOutsideWindow(
+      distance: Long,
+      maxAllowed: Long
+  ) extends DecisionReason
+
 }
 
 final case class MatchDecision(
