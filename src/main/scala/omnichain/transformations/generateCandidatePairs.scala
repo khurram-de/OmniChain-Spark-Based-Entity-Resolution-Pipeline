@@ -9,20 +9,34 @@ object generateCandidatePairs {
       blocked: Dataset[(String, Transaction)]
   ): Dataset[CandidatePairs] = {
     import blocked.sparkSession.implicits._
+    // blocked
+    //   .groupByKey(_._1)
+    //   .flatMapGroups {
+    //     (blockKey: String, records: Iterator[(String, Transaction)]) =>
+    //       val txs = records.map(_._2).toSeq
+    //       for {
+    //         i <- txs.indices
+    //         j <- (i + 1) until txs.length
+    //       } yield CandidatePairs(
+    //         left = txs(i),
+    //         right = txs(j),
+    //         blockKey = blockKey
+    //       )
+    //   }
+    // flatMapGroups approach was too much memory intensive for large blocks.
+    // Using a self-join approach instead.
     blocked
-      .groupByKey(_._1)
-      .flatMapGroups {
-        (blockKey: String, records: Iterator[(String, Transaction)]) =>
-          val txs = records.map(_._2).toSeq
-          for {
-            i <- txs.indices
-            j <- (i + 1) until txs.length
-          } yield CandidatePairs(
-            left = txs(i),
-            right = txs(j),
-            blockKey = blockKey
-          )
-      }
+      .toDF("blockKey", "tx")
+      .join(
+        blocked.toDF("blockKey2", "tx2"),
+        expr("blockKey = blockKey2 AND tx.txId < tx2.txId")
+      )
+      .select(
+        struct(col("tx.*")).as("left"),
+        struct(col("tx2.*")).as("right"),
+        col("blockKey").as("blockKey")
+      )
+      .as[CandidatePairs]
 
   }
 
@@ -31,7 +45,8 @@ object generateCandidatePairs {
       ds2: Dataset[CandidatePairs]
   ): Dataset[CandidatePairs] = {
     /*
-     * Placeholder for union and deduplication logic of candidate pairs from different blocking strategies
+     * Union two datasets of CandidatePairs and deduplicate them
+     * - Deduplication is based on the combination of left and right transaction IDs
      */
     import ds1.sparkSession.implicits._
     ds1

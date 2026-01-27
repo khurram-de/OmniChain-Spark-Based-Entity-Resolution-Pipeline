@@ -1,146 +1,173 @@
 package omnichain.app
 
-import org.apache.spark.sql.{SparkSession, Dataset}
-import omnichain.transformations.SampleData.sampleTransactions
+import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.sql.functions.monotonically_increasing_id
+import org.apache.spark.storage.StorageLevel
+
+import omnichain.ingress.PaySimRaw
+import omnichain.metrics.PipelineMetrics.{blockCapHitRate, topBlockSizes}
+import omnichain.model.Transaction
 import omnichain.transformations.Blocking._
-import omnichain.transformations.SimilarityScoring.{toSimilarityScore}
 import omnichain.transformations.Decisioning._
-import omnichain.model.{PairDecision, SimilarityScore}
+import omnichain.transformations.SimilarityScoring.toSimilarityScore
+import omnichain.transformations.SampleData.sampleTransactions
 import omnichain.transformations.generateCandidatePairs.{
   generateCandidatePairs,
   unionAndDeduplicate
 }
-import org.apache.spark.storage.StorageLevel
-import omnichain.metrics.PipelineMetrics.{topBlockSizes, blockCapHitRate}
-import org.apache.spark.sql.functions.monotonically_increasing_id
-import omnichain.ingress.PaySimRaw
-import omnichain.model.Transaction
+import omnichain.metrics.PipelineMetrics
 
 object Main {
 
   def main(args: Array[String]): Unit = {
 
-    // ------------------------------------------------------------
-    // Spark Session
-    // ------------------------------------------------------------
     val spark = SparkSession
       .builder()
       .appName("OmniChain")
-      .master("local[*]")
+      .master("local[8]")
+      // .config("spark.sql.shuffle.partitions", "200")
+      // .config("spark.driver.memory", "12g")
+      // .config("spark.driver.maxResultSize", "2g")
       .getOrCreate()
 
     import spark.implicits._
 
-    // ------------------------------------------------------------
-    // Controls (keep in one place)
-    // ------------------------------------------------------------
-    val amountBlockCap = 10
-    val topNBlocksToPrint = 10
-    val SL = StorageLevel.MEMORY_AND_DISK
+    println("============================================================")
+    println(s"[BOOT] Spark Application Name: ${spark.sparkContext.appName}")
+    println(s"[BOOT] Master: ${spark.sparkContext.master}")
+    println(
+      s"[BOOT] Default parallelism: ${spark.sparkContext.defaultParallelism}"
+    )
+    println("============================================================")
 
-    // ------------------------------------------------------------
-    // 1. Load / Generate Transactions
-    // ------------------------------------------------------------
+    val amountBlockCap = 500
+    val topNBlocksToPrint = 20
+    val SL = StorageLevel.MEMORY_AND_DISK_SER
+
+    println(s"[CONFIG] StorageLevel: $SL")
+    println(s"[CONFIG] amountBlockCap: $amountBlockCap")
+    println(s"[CONFIG] topNBlocksToPrint: $topNBlocksToPrint")
+    println("------------------------------------------------------------")
+
+    val csvPath = "src/main/scala/omnichain/data/PaySim.csv"
+    val parquetPath = "src/main/scala/omnichain/data/PaySim.parquet"
 
     val schema = PaySimRaw.getSchema()
+    println(s"[INGRESS] Using PaySim schema: $schema")
+    println("------------------------------------------------------------")
 
-    val smpDS =
+    // PaySim has no natural txId, so we synthesize one.
+    val smpDS: Dataset[Transaction] =
       spark.read
         .option("header", "true")
         .schema(schema)
-        .csv("src/main/scala/omnichain/data/PaySim.csv")
+        .csv(csvPath)
+        // .repartition(400)
         .withColumn("txId", monotonically_increasing_id().cast("string"))
         .select(
           $"txId",
-          $"nameOrig",
+          $"nameOrig".as("name"),
+          $"nameOrig".as("wallet"),
           $"amount",
-          $"type",
-          $"step"
+          $"type".as("txType"),
+          $"step".as("eventTime")
         )
-        .as[(String, String, Double, String, Long)]
-        .map { case (txId, nameOrig, amount, txType, step) =>
-          Transaction(
-            txId = txId,
-            name = nameOrig,
-            wallet = nameOrig, // proxy for PaySim (source account)
-            amount = amount,
-            txType = txType,
-            eventTime = step
-          )
-        }
-    // val smpDS =
-    //   sampleTransactions(spark)
-    //     .persist(SL)
+        // .limit(6500000)
+        .as[Transaction]
 
-    println(s"Sampled transactions: ${smpDS.count()}")
+    // Alternate ingress (Parquet)
+    // val smpDS: Dataset[Transaction] =
+    //   spark.read
+    //     .parquet(parquetPath)
+    //     .as[Transaction]
 
-    // ------------------------------------------------------------
-    // 2. Blocking + Block Metrics
-    // ------------------------------------------------------------
+    println(s"[INGRESS] Total transactions loaded: ${smpDS.count()}")
+    println("------------------------------------------------------------")
+
+    println("[BLOCKING] Pass A: Exact Name Blocking - START")
     val blockedByExactNameDS =
       blockingWithExactNameKey(smpDS)
-        .persist(SL)
+    println("[BLOCKING] Pass A: Exact Name Blocking - DONE")
+    println("------------------------------------------------------------")
 
-    topBlockSizes(
+    println("[METRICS] Pass A: Top blocks by Exact Name Blocking - START")
+    val topBlocksByName = topBlockSizes(
       "Exact Name Blocking",
-      blockedByExactNameDS,
+      blockedByExactNameDS.toDF("blockKey", "tx"),
       topNBlocksToPrint
-    ).show(false)
+    )
+    println("[METRICS] Pass A: Top blocks by Exact Name Blocking - DONE")
+    println("[METRICS] Pass A: Printing top blocks")
+    topBlocksByName.show(false)
+    println("------------------------------------------------------------")
 
+    println("[BLOCKING] Pass B: Amount Cents Blocking - START")
     val blockedByExactAmountDS =
       blockingWithAmountCentsKey(smpDS)
-        .persist(SL)
+    println("[BLOCKING] Pass B: Amount Cents Blocking - DONE")
+    println("------------------------------------------------------------")
 
-    val blockedByAmountCentsDS =
-      capBlocks(blockedByExactAmountDS, amountBlockCap)
-        .persist(SL)
-
-    // After both blocking passes are materialized, we no longer need the raw input cached
-    smpDS.unpersist()
-
+    println("[METRICS] Pass B: Top blocks by Amount Cents Blocking - START")
     topBlockSizes(
       "Amount Cents Blocking",
-      blockedByAmountCentsDS,
+      blockedByExactAmountDS.toDF("blockKey", "tx"),
       topNBlocksToPrint
     ).show(false)
+    println("[METRICS] Pass B: Top blocks by Amount Cents Blocking - DONE")
+    println("------------------------------------------------------------")
 
-    blockCapHitRate(
+    // Optional cap path
+    println("[BLOCKING] Pass B: Applying capBlocks - START")
+    val blockedByAmountCentsDS =
+      capBlocks(blockedByExactAmountDS, amountBlockCap)
+    // .persist(SL)
+    println("[BLOCKING] Pass B: Applying capBlocks - DONE")
+
+    println("[METRICS] Cap hit-rate - START")
+    PipelineMetrics.blockCapHitRate(
       "Capping Hit Rate",
       blockedByExactAmountDS,
       blockedByAmountCentsDS
     )
+    println("[METRICS] Cap hit-rate - DONE")
 
-    // No longer needed after cap metrics
     blockedByExactAmountDS.unpersist()
 
-    // ------------------------------------------------------------
-    // 3. Candidate Pair Generation
-    // ------------------------------------------------------------
+    println("[CANDIDATES] Pass A: Candidate generation - START")
     val candidatePairsByNameDS =
       generateCandidatePairs(blockedByExactNameDS)
         .persist(SL)
 
     println(
-      s"Candidate pairs by Name Blocking: ${candidatePairsByNameDS.count()}"
+      s"[CANDIDATES] Pass A: Candidate pairs by Name Blocking: ${candidatePairsByNameDS.count()}"
     )
+    println("[CANDIDATES] Pass A: Candidate generation - DONE")
+    println("------------------------------------------------------------")
 
-    // Safe to drop after candidate generation
+    println(
+      "[CACHE] Unpersist blockedByExactNameDS (safe after Pass A candidates materialized)"
+    )
     blockedByExactNameDS.unpersist()
+    println("------------------------------------------------------------")
 
+    println("[CANDIDATES] Pass B: Candidate generation - START")
     val candidatePairsByAmountDS =
       generateCandidatePairs(blockedByAmountCentsDS)
         .persist(SL)
 
     println(
-      s"Candidate pairs by Amount Blocking: ${candidatePairsByAmountDS.count()}"
+      s"[CANDIDATES] Pass B: Candidate pairs by Amount Blocking: ${candidatePairsByAmountDS.count()}"
     )
+    println("[CANDIDATES] Pass B: Candidate generation - DONE")
+    println("------------------------------------------------------------")
 
-    // Safe to drop after candidate generation
-    blockedByAmountCentsDS.unpersist()
+    println(
+      "[CACHE] Unpersist blockedByExactAmountDS (safe after Pass B candidates materialized)"
+    )
+    blockedByExactAmountDS.unpersist()
+    println("------------------------------------------------------------")
 
-    // ------------------------------------------------------------
-    // 4. Union + Deduplicate
-    // ------------------------------------------------------------
+    println("[CANDIDATES] Union + Deduplicate - START")
     val allCandidatePairsDS =
       unionAndDeduplicate(candidatePairsByNameDS, candidatePairsByAmountDS)
         .persist(SL)
@@ -148,27 +175,30 @@ object Main {
     candidatePairsByNameDS.unpersist()
     candidatePairsByAmountDS.unpersist()
 
-    println(s"Total candidate pairs: ${allCandidatePairsDS.count()}")
-
-    // ------------------------------------------------------------
-    // 5. Similarity Scoring (next step)
-    // ------------------------------------------------------------
+    println(
+      s"[CANDIDATES] Total candidate pairs: ${allCandidatePairsDS.count()}"
+    )
+    println("[CANDIDATES] Union + Deduplicate - DONE")
+    println("------------------------------------------------------------")
 
     val similarityScoresDS =
       allCandidatePairsDS
         .map(toSimilarityScore)
         .persist(SL)
+
+    println("[SCORING] Sample similarity scores:")
     similarityScoresDS.show(false)
+
     allCandidatePairsDS.unpersist()
 
     val policy = omnichain.config.PolicyLoader.load()
-    println(s"Loaded decision policy: $policy")
+    println(s"[POLICY] Loaded decision policy: $policy")
 
     val decisionsDS =
       similarityScoresDS
         .map { score =>
           val decision = decide(score, policy)
-          PairDecision(
+          omnichain.model.PairDecision(
             score.leftTxId,
             score.rightTxId,
             score,
@@ -178,10 +208,18 @@ object Main {
           )
         }
         .persist(SL)
+
+    println("[DECISION] Sample decisions:")
+    print(
+      s"MATCHED COUNT: ${decisionsDS.filter($"decision" === "MATCHED").count()}"
+    )
+    decisionsDS.filter($"decision" === "MATCHED").show(false)
+
     similarityScoresDS.unpersist()
-    decisionsDS.show(false)
     decisionsDS.unpersist()
 
+    println("[SHUTDOWN] Stopping SparkSession")
     spark.stop()
+    println("[SHUTDOWN] Done")
   }
 }

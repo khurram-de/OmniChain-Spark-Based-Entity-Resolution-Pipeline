@@ -3,6 +3,7 @@ package omnichain.metrics
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Dataset, SparkSession, DataFrame}
 import omnichain.model.Transaction
+import com.ibm.icu.impl.locale.LikelySubtags.Data
 
 object PipelineMetrics {
   def countAndPrint[T](
@@ -16,21 +17,20 @@ object PipelineMetrics {
 
   def topBlockSizes[T](
       label: String,
-      blocked: Dataset[(String, Transaction)],
+      blocked: DataFrame,
       topN: Int
-  ): Dataset[(String, Long)] = {
+  ): DataFrame = {
     val spark = blocked.sparkSession
     import spark.implicits._
 
     val resultDF =
       blocked
-        .toDF("blockKey", "tx")
+        .select($"blockKey")
         .groupBy($"blockKey")
-        .count()
+        .agg(count("*").as("count"))
         .orderBy($"count".desc)
         .limit(topN)
-        .select($"blockKey".as[String], $"count".as[Long])
-        .as[(String, Long)]
+        .select($"blockKey", $"count")
 
     println(s"Top $topN block sizes for $label")
     resultDF
@@ -41,37 +41,85 @@ object PipelineMetrics {
       blockedBeforeCap: Dataset[(String, Transaction)],
       blockedAfterCap: Dataset[(String, Transaction)]
   ): Unit = {
+
+    val debugExplain = false
     val spark = blockedBeforeCap.sparkSession
     import spark.implicits._
-    val countBeforeCount = blockedBeforeCap
+
+    // val countBeforeCount = blockedBeforeCap
+    //   .toDF("blockKey", "tx")
+    //   .groupBy($"blockKey")
+    //   .count()
+    //   .withColumnRenamed("count", "beforeCount")
+
+    // val countAfterBlock = blockedAfterCap
+    //   .toDF("blockKey", "tx")
+    //   .groupBy($"blockKey")
+    //   .count()
+    //   .withColumnRenamed("count", "afterCount")
+
+    // val joined =
+    //   countBeforeCount
+    //     .join(countAfterBlock, Seq("blockKey"), "left")
+    //     .na
+    //     .fill(0L, Seq("afterCount"))
+    // if (debugExplain) {
+    //   println(s"[EXPLAIN] $label - countBeforeCount")
+    //   countBeforeCount.explain()
+    //   println("------------------------------------------------------------")
+
+    //   println(s"[EXPLAIN] $label - countAfterBlock")
+    //   countAfterBlock.explain()
+    //   println("------------------------------------------------------------")
+
+    //   println(s"[EXPLAIN] $label - joined")
+    //   joined.explain()
+    //   println("------------------------------------------------------------")
+    // }
+    // val totalBlocksCount = countBeforeCount.count()
+    // val affectedBlocksCount =
+    //   joined.filter($"beforeCount" > $"afterCount").count()
+
+    // val hitRate =
+    //   if (totalBlocksCount == 0) 0.0
+    //   else (affectedBlocksCount / totalBlocksCount) * 100.0
+
+    // above is was replaced with below for performance
+
+    val blocksBeforeDF = blockedBeforeCap
       .toDF("blockKey", "tx")
-      .groupBy($"blockKey")
+      .select($"blockKey")
+      .distinct()
       .count()
-      .withColumnRenamed("count", "beforeCount")
 
-    val countAfterBlock = blockedAfterCap
+    val blocksAfterDF = blockedAfterCap
       .toDF("blockKey", "tx")
-      .groupBy($"blockKey")
+      .select($"blockKey")
+      .distinct()
       .count()
-      .withColumnRenamed("count", "afterCount")
 
-    val joined =
-      countBeforeCount
-        .join(countAfterBlock, Seq("blockKey"), "left")
-        .na
-        .fill(0L, Seq("afterCount"))
+    // if (debugExplain) {
+    //   println(s"[EXPLAIN] $label - blocksBeforeDF (groupBy blockKey)")
+    //   blocksBeforeDF.explain(false)
+    //   println("------------------------------------------------------------")
 
-    val totalBlocksCount = countBeforeCount.count()
-    val affectedBlocksCount =
-      joined.filter($"beforeCount" > $"afterCount").count()
+    //   println(s"[EXPLAIN] $label - blocksAfterDF (groupBy blockKey)")
+    //   blocksAfterDF.explain(false)
+    //   println("------------------------------------------------------------")
+    // }
+
+    val totalBlocksCount = blocksBeforeDF
+    val affectedBlocksCount = blocksBeforeDF - blocksAfterDF
 
     val hitRate =
       if (totalBlocksCount == 0) 0.0
       else (affectedBlocksCount / totalBlocksCount) * 100.0
 
     println(
-      f"$label cap hit-rate: $affectedBlocksCount / $totalBlocksCount blocks affected ($hitRate%.2f%%)"
+      f"$label cap hit-rate: ($affectedBlocksCount ) / $totalBlocksCount blocks affected ($hitRate%.6f%%)"
     )
+
+    // hitRate.toLong
 
   }
 
