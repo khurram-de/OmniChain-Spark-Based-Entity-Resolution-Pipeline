@@ -1,7 +1,7 @@
 package omnichain.app
 
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.spark.sql.functions.monotonically_increasing_id
+import org.apache.spark.sql.functions.{monotonically_increasing_id, desc}
 import org.apache.spark.storage.StorageLevel
 
 import omnichain.ingress.PaySimRaw
@@ -16,6 +16,7 @@ import omnichain.transformations.generateCandidatePairs.{
   unionAndDeduplicate
 }
 import omnichain.metrics.PipelineMetrics
+import omnichain.transformations.EntityResolution._
 
 object Main {
 
@@ -29,6 +30,8 @@ object Main {
       // .config("spark.driver.memory", "12g")
       // .config("spark.driver.maxResultSize", "2g")
       .getOrCreate()
+
+    spark.sparkContext.setCheckpointDir("tmp/omnichain-checkpoints")
 
     import spark.implicits._
 
@@ -209,14 +212,64 @@ object Main {
         }
         .persist(SL)
 
+    val matchedDS = decisionsDS.filter($"decision" === "MATCHED")
+
+    print(s"MATCHED COUNT: ${matchedDS.count()}\n")
     println("[DECISION] Sample decisions:")
-    print(
-      s"MATCHED COUNT: ${decisionsDS.filter($"decision" === "MATCHED").count()}"
-    )
-    decisionsDS.filter($"decision" === "MATCHED").show(false)
+    matchedDS.show(false)
 
     similarityScoresDS.unpersist()
+
+    val matchedEdgesDF = matchedDS
+      .select(
+        $"leftTxId".as("src"),
+        $"rightTxId".as("dst")
+      )
+      .filter($"src" =!= $"dst")
+      .distinct()
+      .persist(SL)
     decisionsDS.unpersist()
+
+    println(
+      s"[ENTITY RESOLUTION] Total matched edges for connected components: ${matchedEdgesDF.count()}\n"
+    )
+    println("[ENTITY RESOLUTION] Sample matched edges:")
+    matchedEdgesDF.show(20, false)
+
+    // val edgesDF =
+    //   matchedEdgesDF
+    //     .union(matchedEdgesDF.select($"dst".as("src"), $"src".as("dst")))
+    //     .distinct()
+    //     .persist(SL)
+
+    // matchedEdgesDF.unpersist()
+
+    // println(s"[ENTITY RESOLUTION] Undirected edges count: ${edgesDF.count()}")
+    // println("[ENTITY RESOLUTION] Sample undirected edges:")
+    // edgesDF.show(20, false)
+
+    println("[ENTITY RESOLUTION] Resolving connected components - START")
+    val resolvedEntitiesDF = resolveConnectedComponents(
+      matchedEdgesDF,
+      maxItrs = 20
+    ).persist(SL)
+
+    resolvedEntitiesDF.show(20, false)
+
+    println(
+      s"[ENTITY RESOLUTION] Total resolved entities: ${resolvedEntitiesDF.count()}\n"
+    )
+    println("[ENTITY RESOLUTION] Sample resolved entities:")
+    resolvedEntitiesDF.show(20, false)
+
+    println("[ENTITY RESOLUTION] Resolved entity by sizes:")
+    resolvedEntitiesDF
+      .groupBy("resolvedEntityId")
+      .count()
+      .orderBy(desc("count"))
+      .show(20, false)
+
+    println("[ENTITY RESOLUTION] Resolving connected components - DONE")
 
     println("[SHUTDOWN] Stopping SparkSession")
     spark.stop()

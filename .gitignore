@@ -14,3 +14,8 @@ target/
 
 # OS
 .DS_Store
+
+# OmniChain Spark artifacts
+**/tmp/**
+**/checkpoints/**
+**/metastore_db/**
