@@ -19,3 +19,7 @@ target/
 **/tmp/**
 **/checkpoints/**
 **/metastore_db/**
+
+# Local run artifacts
+run_local.zip
+*.zip
