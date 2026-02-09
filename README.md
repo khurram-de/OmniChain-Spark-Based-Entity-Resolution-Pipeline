@@ -20,8 +20,8 @@ Entity Resolution unifies these fragments into **resolved entities**, enabling i
 OmniChain emphasizes:
 
 - **Explainability** – every match is traceable to evidence
-- **Policy control** – behavior changes via configuration, not code
-- **Scale realism** – PaySim-scale data, not toy examples
+- **Policy control** – behavior is tuned via application.conf without requiring a re-compile
+- **Scale realism** – PaySim-scale data
 
 ---
 
@@ -112,6 +112,7 @@ Explainable match outcome derived from policy (decision + reasons + policy versi
 
 ## Pipeline Overview
 
+```
 PaySim CSV
 ↓
 DataLoader (Dataset[Transaction])
@@ -127,6 +128,13 @@ Policy-Driven Decisioning
 Matched Pairs
 ↓
 Entity Resolution (Connected Components)
+```
+
+
+**Key Steps:**
+- **Blocking**: Reduces comparison space using scale control
+- **Scoring**: Fact-based similarity computation
+- **Resolution**: Connected components algorithm for final grouping
 
 ---
 
