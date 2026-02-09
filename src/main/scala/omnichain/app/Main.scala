@@ -240,18 +240,6 @@ object Main {
     println("[ENTITY RESOLUTION] Sample matched edges:")
     matchedEdgesDF.show(5, false)
 
-    // val edgesDF =
-    //   matchedEdgesDF
-    //     .union(matchedEdgesDF.select($"dst".as("src"), $"src".as("dst")))
-    //     .distinct()
-    //     .persist(SL)
-
-    // matchedEdgesDF.unpersist()
-
-    // println(s"[ENTITY RESOLUTION] Undirected edges count: ${edgesDF.count()}")
-    // println("[ENTITY RESOLUTION] Sample undirected edges:")
-    // edgesDF.show(20, false)
-
     println("[ENTITY RESOLUTION] Resolving connected components - START")
     val resolvedEntitiesDF = resolveConnectedComponents(
       matchedEdgesDF,
@@ -275,16 +263,7 @@ object Main {
     println("[ENTITY RESOLUTION] Resolving connected components - DONE")
 
     println("------------------------------------------------------------")
-    // println("[INTELLIGENCE REPORT] Generating Top Entities Report - START")
-    // val finalResolvedDF = topEntities(
-    //   smpDS,
-    //   resolvedEntitiesDF,
-    //   topN = 20
-    // )
 
-    // println("[INTELLIGENCE REPORT] Top Entities Report:")
-    // finalResolvedDF.show(false)
-    // println("[INTELLIGENCE REPORT] Generating Top Entities Report - DONE")
     println("[INTELLIGENCE REPORT] Generating Top Entities Report - START")
     val finalResolvedDF =
       IntelligenceReport.topEntities(
@@ -301,8 +280,6 @@ object Main {
     // cleanup
     resolvedEntitiesDF.unpersist()
     smpDS.unpersist()
-
-    println("------------------------------------------------------------")
 
     println("[SHUTDOWN] Stopping SparkSession")
     spark.stop()
