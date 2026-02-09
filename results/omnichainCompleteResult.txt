@@ -1,0 +1,326 @@
+Building project...
+[info] welcome to sbt 1.11.7 (Eclipse Adoptium Java 11.0.29)
+[info] loading project definition from C:\code\DE_PROJECTS\OmniChain\project\project\project
+[info] loading settings for project omnichain-build-build from metals.sbt...
+[info] loading project definition from C:\code\DE_PROJECTS\OmniChain\project\project
+[info] loading settings for project omnichain-build from metals.sbt, plugins.sbt...
+[info] loading project definition from C:\code\DE_PROJECTS\OmniChain\project
+[success] Generated .bloop\omnichain-build.json
+[success] Total time: 2 s, completed 9 Feb 2026, 3:41:13 PM
+[info] loading settings for project omnichain from build.sbt...
+[info] set current project to omnichain (in build file:/C:/code/DE_PROJECTS/OmniChain/)
+[success] Total time: 0 s, completed 9 Feb 2026, 3:41:13 PM
+[info] compiling 20 Scala sources to C:\code\DE_PROJECTS\OmniChain\target\scala-2.13\classes ...
+[info] done compiling
+[warn] multiple main classes detected: run 'show discoveredMainClasses' to see the list
+[success] Total time: 9 s, completed 9 Feb 2026, 3:41:22 PM
+Running Spark job...
+WARNING: Using incubator modules: jdk.incubator.vector
+:: loading settings :: url = jar:file:/C:/spark/jars/ivy-2.5.3.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: C:\Users\User\.ivy2.5.2\cache
+The jars for the packages stored in: C:\Users\User\.ivy2.5.2\jars
+com.typesafe#config added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-2a682a02-4046-47ab-a8c2-36a04641b85b;1.0
+	confs: [default]
+	found com.typesafe#config;1.4.3 in central
+:: resolution report :: resolve 176ms :: artifacts dl 5ms
+	:: modules in use:
+	com.typesafe#config;1.4.3 from central in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   1   |   0   |   0   |   0   ||   1   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-2a682a02-4046-47ab-a8c2-36a04641b85b
+	confs: [default]
+	0 artifacts copied, 1 already retrieved (0kB/11ms)
+============================================================
+[BOOT] Spark Application Name: OmniChain
+[BOOT] Master: local[8]
+[BOOT] Default parallelism: 8
+============================================================
+[CONFIG] StorageLevel: StorageLevel(disk, memory, 1 replicas)
+[CONFIG] amountBlockCap: 500
+[CONFIG] topNBlocksToPrint: 20
+------------------------------------------------------------
+[INGRESS] Using PaySim schema:
+StructType(StructField(step,LongType,false),StructField(type,StringType,true),StructField(amount,DoubleType,false),StructField(nameOrig,StringType,true),StructField(oldbalanceOrg,DoubleType,false),StructField(newbalanceOrig,DoubleType,false),StructField(nameDest,StringType,true),StructField(oldbalanceDest,DoubleType,false),StructField(newbalanceDest,DoubleType,false),StructField(isFraud,IntegerType,false),StructField(isFlaggedFraud,IntegerType,false))
+------------------------------------------------------------
+[INGRESS] Total transactions loaded: 6362620
+------------------------------------------------------------
+[BLOCKING] Pass A: Exact Name Blocking - START
+[BLOCKING] Pass A: Exact Name Blocking - DONE
+------------------------------------------------------------
+[METRICS] Pass A: Top blocks by Exact Name Blocking - START
+Top 20 block sizes for Exact Name Blocking
+[METRICS] Pass A: Top blocks by Exact Name Blocking - DONE
+[METRICS] Pass A: Printing top blocks
++-----------+-----+
+|blockKey   |count|
++-----------+-----+
+|c1065307291|3    |
+|c1530544995|3    |
+|c1677795071|3    |
+|c1976208114|3    |
+|c363736674 |3    |
+|c1462946854|3    |
+|c1999539787|3    |
+|c2051359467|3    |
+|c1784010646|3    |
+|c1832548028|3    |
+|c545315117 |3    |
+|c1902386530|3    |
+|c2098525306|3    |
+|c400299098 |3    |
+|c724452879 |3    |
+|c100265311 |2    |
+|c1001477354|2    |
+|c1029713918|2    |
+|c1001890218|2    |
+|c100367851 |2    |
++-----------+-----+
+
+------------------------------------------------------------
+[BLOCKING] Pass B: Amount Cents Blocking - START
+[BLOCKING] Pass B: Amount Cents Blocking - DONE
+------------------------------------------------------------
+[METRICS] Pass B: Top blocks by Amount Cents Blocking - START
+Top 20 block sizes for Amount Cents Blocking
++----------------------------+-----+
+|blockKey                    |count|
++----------------------------+-----+
+|amt:1000000000|type:TRANSFER|3065 |
+|amt:1000000000|type:CASH_OUT|142  |
+|amt:1000000|type:CASH_IN    |84   |
+|amt:500000|type:CASH_IN     |77   |
+|amt:1500000|type:CASH_IN    |67   |
+|amt:50000|type:CASH_IN      |62   |
+|amt:10000000|type:CASH_IN   |42   |
+|amt:2150000|type:CASH_IN    |37   |
+|amt:12000000|type:CASH_OUT  |29   |
+|amt:13500000|type:CASH_IN   |20   |
+|amt:0|type:CASH_OUT         |16   |
+|amt:243138|type:PAYMENT     |9    |
+|amt:464812|type:PAYMENT     |9    |
+|amt:171167|type:PAYMENT     |8    |
+|amt:215226|type:PAYMENT     |8    |
+|amt:108961|type:PAYMENT     |8    |
+|amt:472593|type:PAYMENT     |8    |
+|amt:332369|type:PAYMENT     |8    |
+|amt:951952|type:PAYMENT     |8    |
+|amt:122634|type:PAYMENT     |8    |
++----------------------------+-----+
+
+[METRICS] Pass B: Top blocks by Amount Cents Blocking - DONE
+------------------------------------------------------------
+[BLOCKING] Pass B: Applying capBlocks - START
+[BLOCKING] Pass B: Applying capBlocks - DONE
+[METRICS] Cap hit-rate - START
+Capping Hit Rate cap hit-rate: (1 ) / 5630865 blocks affected (0.000000%)
+[METRICS] Cap hit-rate - DONE
+[CANDIDATES] Pass A: Candidate generation - START
+[CANDIDATES] Pass A: Candidate pairs by Name Blocking: 9328
+[CANDIDATES] Pass A: Candidate generation - DONE
+------------------------------------------------------------
+[CACHE] Unpersist blockedByExactNameDS (safe after Pass A candidates materialized)
+------------------------------------------------------------
+[CANDIDATES] Pass B: Candidate generation - START
+[CANDIDATES] Pass B: Candidate pairs by Amount Blocking: 977155
+[CANDIDATES] Pass B: Candidate generation - DONE
+------------------------------------------------------------
+[CACHE] Unpersist blockedByExactAmountDS (safe after Pass B candidates materialized)
+------------------------------------------------------------
+[CANDIDATES] Union + Deduplicate - START
+[CANDIDATES] Total candidate pairs: 986483
+[CANDIDATES] Union + Deduplicate - DONE
+------------------------------------------------------------
+[SCORING] Sample similarity scores:
++--------+-----------+--------------+----------------+------------------------+------------------------+--------------+------------+
+|leftTxId|rightTxId  |nameSimilarity|walletExactMatch|amountRelativeDifference|blockKey                |typeExactMatch|timeDistance|
++--------+-----------+--------------+----------------+------------------------+------------------------+--------------+------------+
+|100350  |8589962702 |0.3           |false           |0.0                     |amt:917411|type:PAYMENT |true          |31          |
+|102084  |34360011705|0.27          |false           |0.0                     |amt:535881|type:PAYMENT |true          |248         |
+|10212   |51539609765|0.27          |false           |0.0                     |amt:1152987|type:PAYMENT|true          |339         |
+|102665  |34360464170|0.18          |false           |0.0                     |amt:1109264|type:PAYMENT|true          |276         |
+|103666  |567945     |0.18          |false           |0.0                     |amt:112684|type:PAYMENT |true          |13          |
+|104627  |42950246388|0.4           |false           |0.0                     |amt:530267|type:PAYMENT |true          |318         |
+|10552   |119499     |0.18          |false           |0.0                     |amt:65004|type:PAYMENT  |true          |4           |
+|10590   |575579     |0.18          |false           |0.0                     |amt:37083|type:PAYMENT  |true          |18          |
+|1067    |8589982800 |0.2           |false           |0.0                     |amt:76021|type:PAYMENT  |true          |40          |
+|106801  |25770282448|0.27          |false           |0.0                     |amt:1166151|type:PAYMENT|true          |218         |
+|107027  |8590278841 |0.18          |false           |0.0                     |amt:546966|type:PAYMENT |true          |121         |
+|107149  |712609     |0.36          |false           |0.0                     |amt:1903991|type:PAYMENT|true          |27          |
+|107490  |25770525726|0.36          |false           |0.0                     |amt:1821879|type:CASH_IN|true          |226         |
+|108271  |17179936864|0.18          |false           |0.0                     |amt:264687|type:PAYMENT |true          |149         |
+|10898   |34359740924|0.18          |false           |0.0                     |amt:1262155|type:PAYMENT|true          |243         |
+|109702  |42950102869|0.27          |false           |0.0                     |amt:1158519|type:PAYMENT|true          |312         |
+|10997   |51539968592|0.36          |false           |0.0                     |amt:1136751|type:PAYMENT|true          |352         |
+|110491  |42949718908|0.27          |false           |0.0                     |amt:691073|type:PAYMENT |true          |289         |
+|11100   |42950029526|0.27          |false           |0.0                     |amt:563353|type:PAYMENT |true          |303         |
+|11100   |60129997595|0.1           |false           |0.0                     |amt:563353|type:PAYMENT |true          |507         |
++--------+-----------+--------------+----------------+------------------------+------------------------+--------------+------------+
+only showing top 20 rows
+[POLICY] Loaded decision policy: DecisionPolicy(1.0.0,0.85,0.1,true,true,5,BEHAVIORAL)
+MATCHED COUNT: 42572
+[DECISION] Sample decisions:
++-----------+-----------+-------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------+--------+-------------+
+|leftTxId   |rightTxId  |similarityScore                                                                |decisionReasons                                                                                                   |decision|policyVersion|
++-----------+-----------+-------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------+--------+-------------+
+|10552      |119499     |{10552, 119499, 0.18, false, 0.0, amt:65004|type:PAYMENT, true, 4}             |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.18,0.85), StepWithinWindow(4,5), TypeMatched]|MATCHED |1.0.0        |
+|116341     |211427     |{116341, 211427, 0.2, false, 0.0, amt:773293|type:CASH_OUT, true, 2}           |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.2,0.85), StepWithinWindow(2,5), TypeMatched] |MATCHED |1.0.0        |
+|120895     |215463     |{120895, 215463, 0.3, false, 0.0, amt:1222408|type:PAYMENT, true, 2}           |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.3,0.85), StepWithinWindow(2,5), TypeMatched] |MATCHED |1.0.0        |
+|154848     |296146     |{154848, 296146, 0.2, false, 0.0, amt:882492|type:PAYMENT, true, 3}            |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.2,0.85), StepWithinWindow(3,5), TypeMatched] |MATCHED |1.0.0        |
+|158989     |320187     |{158989, 320187, 0.09, false, 0.0, amt:1484081|type:PAYMENT, true, 4}          |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.09,0.85), StepWithinWindow(4,5), TypeMatched]|MATCHED |1.0.0        |
+|17179880804|8590716226 |{17179880804, 8590716226, 0.36, false, 0.0, amt:166103|type:PAYMENT, true, 1}  |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.36,0.85), StepWithinWindow(1,5), TypeMatched]|MATCHED |1.0.0        |
+|17179895859|17179930016|{17179895859, 17179930016, 0.36, false, 0.0, amt:416372|type:CASH_OUT, true, 1}|[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.36,0.85), StepWithinWindow(1,5), TypeMatched]|MATCHED |1.0.0        |
+|17179927330|8590655423 |{17179927330, 8590655423, 0.3, false, 0.0, amt:249134|type:PAYMENT, true, 5}   |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.3,0.85), StepWithinWindow(5,5), TypeMatched] |MATCHED |1.0.0        |
+|17179943131|17180113418|{17179943131, 17180113418, 0.18, false, 0.0, amt:140825|type:PAYMENT, true, 5} |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.18,0.85), StepWithinWindow(5,5), TypeMatched]|MATCHED |1.0.0        |
+|17179948605|8590680208 |{17179948605, 8590680208, 0.27, false, 0.0, amt:137492|type:PAYMENT, true, 5}  |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.27,0.85), StepWithinWindow(5,5), TypeMatched]|MATCHED |1.0.0        |
+|17179976384|17180130925|{17179976384, 17180130925, 0.27, false, 0.0, amt:1513561|type:PAYMENT, true, 4}|[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.27,0.85), StepWithinWindow(4,5), TypeMatched]|MATCHED |1.0.0        |
+|17180013013|17180157443|{17180013013, 17180157443, 0.18, false, 0.0, amt:113583|type:PAYMENT, true, 4} |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.18,0.85), StepWithinWindow(4,5), TypeMatched]|MATCHED |1.0.0        |
+|17180043027|17180121203|{17180043027, 17180121203, 0.3, false, 0.0, amt:1388772|type:PAYMENT, true, 2} |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.3,0.85), StepWithinWindow(2,5), TypeMatched] |MATCHED |1.0.0        |
+|17180067865|17180127643|{17180067865, 17180127643, 0.18, false, 0.0, amt:468560|type:PAYMENT, true, 1} |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.18,0.85), StepWithinWindow(1,5), TypeMatched]|MATCHED |1.0.0        |
+|17180109219|17180186766|{17180109219, 17180186766, 0.36, false, 0.0, amt:1153693|type:PAYMENT, true, 5}|[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.36,0.85), StepWithinWindow(5,5), TypeMatched]|MATCHED |1.0.0        |
+|17180128798|17180130522|{17180128798, 17180130522, 0.2, false, 0.0, amt:52822|type:PAYMENT, true, 0}   |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.2,0.85), StepWithinWindow(0,5), TypeMatched] |MATCHED |1.0.0        |
+|17180136285|17180142275|{17180136285, 17180142275, 0.18, false, 0.0, amt:1439448|type:PAYMENT, true, 0}|[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.18,0.85), StepWithinWindow(0,5), TypeMatched]|MATCHED |1.0.0        |
+|17180161390|17180173951|{17180161390, 17180173951, 0.36, false, 0.0, amt:468073|type:PAYMENT, true, 1} |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.36,0.85), StepWithinWindow(1,5), TypeMatched]|MATCHED |1.0.0        |
+|17180188726|17180260141|{17180188726, 17180260141, 0.18, false, 0.0, amt:658272|type:PAYMENT, true, 2} |[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.18,0.85), StepWithinWindow(2,5), TypeMatched]|MATCHED |1.0.0        |
+|17180208115|17180369022|{17180208115, 17180369022, 0.27, false, 0.0, amt:1976439|type:PAYMENT, true, 5}|[AmountDeltaWithinTolerance(0.0,0.1), NameSimilarityBelowThreshold(0.27,0.85), StepWithinWindow(5,5), TypeMatched]|MATCHED |1.0.0        |
++-----------+-----------+-------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------+--------+-------------+
+only showing top 20 rows
+[ENTITY RESOLUTION] Total matched edges for connected components: 42572
+
+[ENTITY RESOLUTION] Sample matched edges:
++-----------+-----------+
+|src        |dst        |
++-----------+-----------+
+|151000     |191155     |
+|17179873009|8590637750 |
+|17180661682|25769966432|
+|208837     |99434      |
+|233685     |47457      |
++-----------+-----------+
+only showing top 5 rows
+[ENTITY RESOLUTION] Resolving connected components - START
+[ENTITY RESOLUTION] iter=1 changed=38563
+[ENTITY RESOLUTION] iter=2 changed=422
+[ENTITY RESOLUTION] iter=3 changed=42
+[ENTITY RESOLUTION] iter=4 changed=6
+[ENTITY RESOLUTION] iter=5 changed=4
+[ENTITY RESOLUTION] Total resolved entities: 76034
+
+[ENTITY RESOLUTION] Sample resolved entities:
++-----------+----------------+
+|txId       |resolvedEntityId|
++-----------+----------------+
+|51540201696|51540201696     |
+|8590158558 |8590158558      |
+|42950398052|42950087335     |
+|51540167061|51540167061     |
+|25769861545|25769861545     |
++-----------+----------------+
+only showing top 5 rows
+[ENTITY RESOLUTION] Resolved entity by sizes:
++----------------+-----+
+|resolvedEntityId|count|
++----------------+-----+
+|51539611431     |48   |
+|42950087335     |47   |
+|34360499195     |30   |
+|34360519263     |26   |
+|25770193898     |26   |
++----------------+-----+
+only showing top 5 rows
+[ENTITY RESOLUTION] Resolving connected components - DONE
+------------------------------------------------------------
+[INTELLIGENCE REPORT] Generating Top Entities Report - START
+[INTELLIGENCE REPORT] Top Entities Report:
++----------------+-----------+--------------+------------+-----------------+
+|resolvedEntityId|totalAmount|totalAmountFmt|numberOfTxns|distinctIdsMerged|
++----------------+-----------+--------------+------------+-----------------+
+|60129841133     |1.4E8      |140,000,000   |14          |14               |
+|60130221781     |1.0E8      |100,000,000   |10          |10               |
+|60130288633     |1.0E8      |100,000,000   |10          |10               |
+|51540355144     |8.0E7      |80,000,000    |8           |8                |
+|60130207639     |6.0E7      |60,000,000    |6           |6                |
+|60130270887     |6.0E7      |60,000,000    |6           |6                |
+|60129935774     |6.0E7      |60,000,000    |6           |6                |
+|25770584120     |5.0E7      |50,000,000    |5           |5                |
+|60129981844     |5.0E7      |50,000,000    |5           |5                |
+|60130283571     |5.0E7      |50,000,000    |5           |5                |
+|51539824821     |4.0E7      |40,000,000    |4           |4                |
+|42949812263     |4.0E7      |40,000,000    |4           |4                |
+|60130192586     |4.0E7      |40,000,000    |4           |4                |
+|17179963833     |4.0E7      |40,000,000    |4           |4                |
+|60129999435     |3.0E7      |30,000,000    |3           |3                |
+|34360284531     |3.0E7      |30,000,000    |3           |3                |
+|60130094674     |3.0E7      |30,000,000    |3           |3                |
+|60130131614     |3.0E7      |30,000,000    |3           |3                |
+|34360134618     |3.0E7      |30,000,000    |3           |3                |
+|8590155852      |3.0E7      |30,000,000    |3           |3                |
++----------------+-----------+--------------+------------+-----------------+
+
+[INTELLIGENCE REPORT] Generating Top Entities Report - DONE
+------------------------------------------------------------
+------------------------------------------------------------
+[SHUTDOWN] Stopping SparkSession
+[SHUTDOWN] Done
+26/02/09 15:47:22 ERROR ShutdownHookManager: Exception while deleting Spark temp dir: C:\Users\User\AppData\Local\Temp\spark-e0d5e7c7-cabc-42e3-81dc-4df2d04ec7fb
+java.io.IOException: Failed to delete: C:\Users\User\AppData\Local\Temp\spark-e0d5e7c7-cabc-42e3-81dc-4df2d04ec7fb\userFiles-2d3afad7-e7d7-4b6a-898f-a51688de67dc\omnichain_2.13-0.1.0.jar
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUtils.java:155)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:124)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUtils.java:138)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:124)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUtils.java:138)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:124)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:94)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively(SparkFileUtils.scala:121)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively$(SparkFileUtils.scala:120)
+	at org.apache.spark.util.Utils$.deleteRecursively(Utils.scala:1048)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4(ShutdownHookManager.scala:70)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4$adapted(ShutdownHookManager.scala:67)
+	at scala.collection.ArrayOps$.foreach$extension(ArrayOps.scala:1324)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$2(ShutdownHookManager.scala:67)
+	at org.apache.spark.util.SparkShutdownHook.run(ShutdownHookManager.scala:231)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$2(ShutdownHookManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1937)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$1(ShutdownHookManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at scala.util.Try$.apply(Try.scala:217)
+	at org.apache.spark.util.SparkShutdownHookManager.runAll(ShutdownHookManager.scala:205)
+	at org.apache.spark.util.SparkShutdownHookManager$$anon$2.run(ShutdownHookManager.scala:184)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:833)
+26/02/09 15:47:22 ERROR ShutdownHookManager: Exception while deleting Spark temp dir: C:\Users\User\AppData\Local\Temp\spark-e0d5e7c7-cabc-42e3-81dc-4df2d04ec7fb\userFiles-2d3afad7-e7d7-4b6a-898f-a51688de67dc
+java.io.IOException: Failed to delete: C:\Users\User\AppData\Local\Temp\spark-e0d5e7c7-cabc-42e3-81dc-4df2d04ec7fb\userFiles-2d3afad7-e7d7-4b6a-898f-a51688de67dc\omnichain_2.13-0.1.0.jar
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUtils.java:155)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:124)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursivelyUsingJavaIO(JavaUtils.java:138)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:124)
+	at org.apache.spark.network.util.JavaUtils.deleteRecursively(JavaUtils.java:94)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively(SparkFileUtils.scala:121)
+	at org.apache.spark.util.SparkFileUtils.deleteRecursively$(SparkFileUtils.scala:120)
+	at org.apache.spark.util.Utils$.deleteRecursively(Utils.scala:1048)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4(ShutdownHookManager.scala:70)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$4$adapted(ShutdownHookManager.scala:67)
+	at scala.collection.ArrayOps$.foreach$extension(ArrayOps.scala:1324)
+	at org.apache.spark.util.ShutdownHookManager$.$anonfun$new$2(ShutdownHookManager.scala:67)
+	at org.apache.spark.util.SparkShutdownHook.run(ShutdownHookManager.scala:231)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$2(ShutdownHookManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at org.apache.spark.util.Utils$.logUncaughtExceptions(Utils.scala:1937)
+	at org.apache.spark.util.SparkShutdownHookManager.$anonfun$runAll$1(ShutdownHookManager.scala:205)
+	at scala.runtime.java8.JFunction0$mcV$sp.apply(JFunction0$mcV$sp.scala:18)
+	at scala.util.Try$.apply(Try.scala:217)
+	at org.apache.spark.util.SparkShutdownHookManager.runAll(ShutdownHookManager.scala:205)
+	at org.apache.spark.util.SparkShutdownHookManager$$anon$2.run(ShutdownHookManager.scala:184)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:833)

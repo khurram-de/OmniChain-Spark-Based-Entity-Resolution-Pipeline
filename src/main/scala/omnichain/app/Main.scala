@@ -17,6 +17,8 @@ import omnichain.transformations.generateCandidatePairs.{
 }
 import omnichain.metrics.PipelineMetrics
 import omnichain.transformations.EntityResolution._
+import omnichain.transformations.IntelligenceReport.topEntities
+import omnichain.transformations.IntelligenceReport
 
 object Main {
 
@@ -31,7 +33,9 @@ object Main {
       // .config("spark.driver.maxResultSize", "2g")
       .getOrCreate()
 
-    spark.sparkContext.setCheckpointDir("tmp/omnichain-checkpoints")
+    spark.sparkContext.setCheckpointDir(
+      "tmp/omnichain-checkpoints"
+    ) // Set checkpoint directory due to fsilkiness in connected components | EntityResolution
 
     import spark.implicits._
 
@@ -56,7 +60,7 @@ object Main {
     val parquetPath = "src/main/scala/omnichain/data/PaySim.parquet"
 
     val schema = PaySimRaw.getSchema()
-    println(s"[INGRESS] Using PaySim schema: $schema")
+    println(s"[INGRESS] Using PaySim schema:\n$schema")
     println("------------------------------------------------------------")
 
     // PaySim has no natural txId, so we synthesize one.
@@ -234,7 +238,7 @@ object Main {
       s"[ENTITY RESOLUTION] Total matched edges for connected components: ${matchedEdgesDF.count()}\n"
     )
     println("[ENTITY RESOLUTION] Sample matched edges:")
-    matchedEdgesDF.show(20, false)
+    matchedEdgesDF.show(5, false)
 
     // val edgesDF =
     //   matchedEdgesDF
@@ -251,25 +255,54 @@ object Main {
     println("[ENTITY RESOLUTION] Resolving connected components - START")
     val resolvedEntitiesDF = resolveConnectedComponents(
       matchedEdgesDF,
-      maxItrs = 20
+      maxItrs = 5
     ).persist(SL)
-
-    resolvedEntitiesDF.show(20, false)
+    matchedEdgesDF.unpersist()
 
     println(
       s"[ENTITY RESOLUTION] Total resolved entities: ${resolvedEntitiesDF.count()}\n"
     )
     println("[ENTITY RESOLUTION] Sample resolved entities:")
-    resolvedEntitiesDF.show(20, false)
+    resolvedEntitiesDF.show(5, false)
 
     println("[ENTITY RESOLUTION] Resolved entity by sizes:")
     resolvedEntitiesDF
       .groupBy("resolvedEntityId")
       .count()
       .orderBy(desc("count"))
-      .show(20, false)
+      .show(5, false)
 
     println("[ENTITY RESOLUTION] Resolving connected components - DONE")
+
+    println("------------------------------------------------------------")
+    // println("[INTELLIGENCE REPORT] Generating Top Entities Report - START")
+    // val finalResolvedDF = topEntities(
+    //   smpDS,
+    //   resolvedEntitiesDF,
+    //   topN = 20
+    // )
+
+    // println("[INTELLIGENCE REPORT] Top Entities Report:")
+    // finalResolvedDF.show(false)
+    // println("[INTELLIGENCE REPORT] Generating Top Entities Report - DONE")
+    println("[INTELLIGENCE REPORT] Generating Top Entities Report - START")
+    val finalResolvedDF =
+      IntelligenceReport.topEntities(
+        transactions = smpDS,
+        resolvedMapping = resolvedEntitiesDF,
+        topN = 20
+      )
+
+    println("[INTELLIGENCE REPORT] Top Entities Report:")
+    finalResolvedDF.show(false)
+    println("[INTELLIGENCE REPORT] Generating Top Entities Report - DONE")
+    println("------------------------------------------------------------")
+
+    // cleanup
+    resolvedEntitiesDF.unpersist()
+    smpDS.unpersist()
+
+    println("------------------------------------------------------------")
 
     println("[SHUTDOWN] Stopping SparkSession")
     spark.stop()
