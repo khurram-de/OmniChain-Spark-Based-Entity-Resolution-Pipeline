@@ -22,4 +22,5 @@ target/
 
 # Local run artifacts
 run_local.zip
-*.zipsrc/main/scala/omnichain/data/PaySim.csv
+*.zip
+src/main/scala/omnichain/data/PaySim.csv
