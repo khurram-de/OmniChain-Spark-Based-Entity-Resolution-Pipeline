@@ -288,12 +288,48 @@ OOMs are treated as **design signals**, not configuration failures.
 - Dataset-first design for refactor confidence
 
 ---
+## Dataset
+
+This project uses the PaySim synthetic financial transaction dataset
+(~6.3 million transactions), which simulates mobile money behavior for
+fraud and AML research.
+
+The dataset is publicly available on Kaggle:
+https://www.kaggle.com/datasets/ealaxi/paysim1
+
+Due to its size, the raw PaySim CSV is not stored in this repository.
+To run the pipeline locally, download the dataset from Kaggle and place
+the CSV at:
+
+src/main/scala/omnichain/data/PaySim.csv
+
+---
 ## Results
 
-The full pipeline was executed on the PaySim dataset (~6.3M transactions).
+The full pipeline was executed locally on the PaySim synthetic transaction dataset
+(~6.3M transactions). Due to dataset size, the raw PaySim CSV is not stored in the
+repository; however, the execution outputs and metrics are versioned for
+reproducibility and review.
 
-A sample of the final entity-level output is shown below.  
-Full execution logs and metrics are available under `results/omnichainCompleteResult.txt`.
+```text
++----------------+--------------+------------+-----------------+
+|resolvedEntityId|totalAmount   |numberOfTxns|distinctIdsMerged|
++----------------+--------------+------------+-----------------+
+|60129841133     |140,000,000   |14          |14               |
+|60130221781     |100,000,000   |10          |10               |
+|60130288633     |100,000,000   |10          |10               |
+|51540355144     |80,000,000    |8           |8                |
+|60130207639     |60,000,000    |6           |6                |
+|60130270887     |60,000,000    |6           |6                |
+|60129935774     |60,000,000    |6           |6                |
+|25770584120     |50,000,000    |5           |5                |
+|60129981844     |50,000,000    |5           |5                |
++----------------+--------------+------------+-----------------+
+```
+
+A sample of the final entity-level output is shown above.
+Full execution logs and metrics are available under
+results/omnichainCompleteResult.txt.
 ---
 
 ## Final Note
