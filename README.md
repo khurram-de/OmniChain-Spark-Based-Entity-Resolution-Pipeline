@@ -327,9 +327,10 @@ reproducibility and review.
 +----------------+--------------+------------+-----------------+
 ```
 
-A sample of the final entity-level output is shown above.
-Full execution logs and metrics are available under
-results/omnichainCompleteResult.txt.
+A sample of the final entity-level output is shown above.  
+Full execution logs and metrics are available under  
+`results/omnichainCompleteResult.txt`.
+
 ---
 
 ## Final Note
@@ -338,4 +339,11 @@ OmniChain is intentionally **not over-optimized**.
 
 Design trade-offs are documented to prioritize correctness, explainability, and extensibility over premature optimization.
 
+---
 
+## Author
+
+Maintained by: **Khurram K.**  
+🔗 [LinkedIn](https://www.linkedin.com/in/mkhurramhk/)
+
+---
